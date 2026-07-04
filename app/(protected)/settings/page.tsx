@@ -20,6 +20,7 @@ export default function SettingsPage() {
     taux_achat_fc: "",
     taux_echange_fc: "",
     unites_par_10usd: "",
+    seuil_max_dette: "",
   });
 
   // Charger les settings
@@ -274,6 +275,24 @@ export default function SettingsPage() {
                 min="0"
                 placeholder="Ex: 100"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Seuil max dettes/jour (FC)
+              </label>
+              <input
+                type="number"
+                value={formData.seuil_max_dette}
+                onChange={(e) =>
+                  setFormData({ ...formData, seuil_max_dette: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-blue-500 outline-none"
+                min="0"
+                placeholder="Ex: 50000"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Montant max de dettes autorisé par jour
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
