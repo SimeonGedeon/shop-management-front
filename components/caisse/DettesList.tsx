@@ -16,6 +16,7 @@ export default function DettesList() {
   const [message, setMessage] = useState("");
   const [remboursementId, setRemboursementId] = useState<number | null>(null);
   const [montantRemb, setMontantRemb] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   // Résumé des dettes
   const { data: resumeData } = useQuery({
@@ -315,11 +316,7 @@ export default function DettesList() {
                         )}
                         {/* Annuler */}
                         <button
-                          onClick={() => {
-                            if (confirm("Annuler cette dette ?")) {
-                              annulerMutation.mutate(dette.id);
-                            }
-                          }}
+                          onClick={() => setDeleteTarget(dette)}
                           className="text-red-500 hover:text-red-700 text-xs"
                           title="Annuler"
                         >
@@ -332,6 +329,42 @@ export default function DettesList() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal confirmation simple */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-25 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDeleteTarget(null)}
+          ></div>
+          <div className="relative bg-white rounded-xl shadow-lg p-5 w-full max-w-xs text-center">
+            <p className="text-gray-800 font-medium text-sm mb-1">
+              Annuler cette dette ?
+            </p>
+            <p className="text-gray-500 text-xs mb-4">
+              {deleteTarget.client_nom} •{" "}
+              {deleteTarget.montant.toLocaleString()} FC
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200"
+              >
+                Non
+              </button>
+              <button
+                onClick={() => {
+                  annulerMutation.mutate(deleteTarget.id);
+                  setDeleteTarget(null);
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600"
+              >
+                Oui
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

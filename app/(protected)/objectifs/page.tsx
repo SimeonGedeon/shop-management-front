@@ -1,4 +1,4 @@
-// app/(protected)/objectifs/page.tsx
+// app/(protected)/objectifs/page.tsx - Version responsive
 
 "use client";
 
@@ -19,8 +19,8 @@ export default function ObjectifsPage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["objectifs-semaine"],
     queryFn: async () => {
-      const response = await api.get("/objectif");
-      return response.data;
+      const r = await api.get("/objectif");
+      return r.data;
     },
   });
 
@@ -72,13 +72,12 @@ export default function ObjectifsPage() {
     },
   });
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="flex items-center justify-center h-64">
         <div className="h-10 w-10 animate-spin rounded-full border-3 border-blue-600 border-t-transparent" />
       </div>
     );
-  }
 
   const obj = data?.data;
   if (!obj) return null;
@@ -89,71 +88,67 @@ export default function ObjectifsPage() {
   const depasse = obj.total_general > objectif;
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4 p-3 sm:p-4 lg:p-6">
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">🎯 Objectifs</h2>
-          <p className="text-sm text-gray-500">Semaine {obj.semaine}</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+            🎯 Objectifs
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Semaine {obj.semaine}
+          </p>
         </div>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition"
+          className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
         >
-          🔄 Actualiser
+          🔄
         </button>
       </div>
 
       {message && (
-        <div className="p-3 rounded-lg text-sm font-medium bg-green-50 text-green-700 border border-green-200">
+        <div className="p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium bg-green-50 text-green-700 border border-green-200">
           {message}
         </div>
       )}
 
       {/* Résumé */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-blue-50 rounded-xl p-4 text-center">
-          <p className="text-xs text-blue-600 font-medium">Objectif</p>
-          <p className="text-2xl font-bold text-blue-900">
-            {objectif.toLocaleString()} FC
-          </p>
-        </div>
-        <div
-          className={`rounded-xl p-4 text-center ${depasse ? "bg-green-100" : "bg-green-50"}`}
-        >
-          <p className="text-xs text-green-600 font-medium">Réalisé</p>
-          <p className="text-2xl font-bold text-green-900">
-            {obj.total_general.toLocaleString()} FC
-          </p>
-        </div>
-        <div className="bg-amber-50 rounded-xl p-4 text-center">
-          <p className="text-xs text-amber-600 font-medium">Reste</p>
-          <p className="text-2xl font-bold text-amber-900">
-            {obj.reste.toLocaleString()} FC
-          </p>
-        </div>
-        <div className="bg-purple-50 rounded-xl p-4 text-center">
-          <p className="text-xs text-purple-600 font-medium">Progression</p>
-          <p className="text-2xl font-bold text-purple-900">{progression}%</p>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <Card
+          label="Objectif"
+          value={`${objectif.toLocaleString()} FC`}
+          color="blue"
+        />
+        <Card
+          label="Réalisé"
+          value={`${obj.total_general.toLocaleString()} FC`}
+          color={depasse ? "green" : "green"}
+        />
+        <Card
+          label="Reste"
+          value={`${obj.reste.toLocaleString()} FC`}
+          color="amber"
+        />
+        <Card label="Progression" value={`${progression}%`} color="purple" />
       </div>
 
-      {/* Barre de progression */}
-      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>0 FC</span>
+      {/* Barre */}
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-200">
+        <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 mb-1">
+          <span>0</span>
           <span>{objectif.toLocaleString()} FC</span>
         </div>
-        <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-3 sm:h-4 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className={`h-4 rounded-full transition-all ${depasse ? "bg-green-500" : "bg-blue-500"}`}
+            className={`h-full rounded-full transition-all ${depasse ? "bg-green-500" : "bg-blue-500"}`}
             style={{ width: `${progression}%` }}
-          ></div>
+          />
         </div>
       </div>
 
       {/* Détail par jour */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {jours.map((jour: any) => {
           const isExpanded = expandedJour === jour.date;
           const autresRevenus = jour.autres_revenus || [];
@@ -163,22 +158,21 @@ export default function ObjectifsPage() {
               key={jour.date}
               className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
             >
-              {/* En-tête du jour */}
               <button
                 onClick={() => setExpandedJour(isExpanded ? null : jour.date)}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition"
+                className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 transition"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span
-                    className={`text-lg ${isExpanded ? "rotate-90" : ""} transition-transform`}
+                    className={`text-sm sm:text-lg transition-transform ${isExpanded ? "rotate-90" : ""}`}
                   >
                     ▶
                   </span>
                   <div className="text-left">
-                    <p className="font-semibold text-gray-900 capitalize">
+                    <p className="text-sm sm:text-base font-semibold text-gray-900 capitalize">
                       {jour.jour}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-[10px] sm:text-xs text-gray-400">
                       {new Date(jour.date).toLocaleDateString("fr-FR", {
                         day: "numeric",
                         month: "short",
@@ -187,47 +181,40 @@ export default function ObjectifsPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-gray-900">
+                  <p className="text-sm sm:text-base font-bold text-gray-900">
                     {jour.total_jour > 0
                       ? `${jour.total_jour.toLocaleString()} FC`
                       : "—"}
                   </p>
-                  <p className="text-xs text-gray-400">
-                    Crédits : {jour.benefice_credits.toLocaleString()} FC
+                  <p className="text-[10px] sm:text-xs text-gray-400">
+                    Crédits: {jour.benefice_credits.toLocaleString()}
                     {autresRevenus.length > 0 &&
-                      ` + ${autresRevenus.reduce((s: number, r: any) => s + r.montant, 0).toLocaleString()} FC autres`}
+                      ` +${autresRevenus.reduce((s: number, r: any) => s + r.montant, 0).toLocaleString()}`}
                   </p>
                 </div>
               </button>
 
-              {/* Détail expandé */}
               {isExpanded && (
-                <div className="border-t border-gray-100 p-4 bg-gray-50">
+                <div className="border-t border-gray-100 p-3 sm:p-4 bg-gray-50">
                   {/* Bénéfice crédits */}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-xs sm:text-sm text-gray-600">
                       Bénéfice crédits
                     </span>
                     {editCredits === jour.id ? (
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor={`edit-credits-${jour.id}`}
-                          className="sr-only"
-                        >
-                          Modifier les crédits pour {jour.jour}
-                        </label>
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <input
                           type="number"
                           value={editValue}
+                          title="Modifier les crédits"
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="w-32 border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 outline-none"
-                          id={`edit-credits-${jour.id}`}
+                          className="w-24 sm:w-32 border border-blue-300 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-gray-900 outline-none"
                           min="0"
                           autoFocus
                         />
                         <button
                           onClick={() => updateCreditMutation.mutate(jour.id)}
-                          className="text-green-600 text-sm font-medium"
+                          className="text-green-600 text-sm"
                         >
                           ✅
                         </button>
@@ -240,7 +227,7 @@ export default function ObjectifsPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-blue-700">
+                        <span className="text-sm sm:text-base font-bold text-blue-700">
                           {jour.benefice_credits.toLocaleString()} FC
                         </span>
                         <button
@@ -249,7 +236,6 @@ export default function ObjectifsPage() {
                             setEditValue(String(jour.benefice_credits));
                           }}
                           className="text-gray-400 hover:text-blue-600 text-xs"
-                          title="Modifier"
                         >
                           ✏️
                         </button>
@@ -259,7 +245,7 @@ export default function ObjectifsPage() {
 
                   {/* Autres revenus */}
                   <div className="mb-3">
-                    <p className="text-sm font-medium text-gray-600 mb-2">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 mb-2">
                       Autres revenus
                     </p>
                     {autresRevenus.length > 0 ? (
@@ -267,10 +253,10 @@ export default function ObjectifsPage() {
                         {autresRevenus.map((r: any) => (
                           <div
                             key={r.id}
-                            className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-sm"
+                            className="flex items-center justify-between bg-white rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm"
                           >
                             <span className="text-gray-700">{r.libelle}</span>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3">
                               <span className="font-medium text-green-600">
                                 +{r.montant.toLocaleString()} FC
                               </span>
@@ -291,45 +277,33 @@ export default function ObjectifsPage() {
                     )}
 
                     {showForm === jour.date ? (
-                      <div className="flex gap-2">
-                        <label
-                          htmlFor={`libelle-${jour.date}`}
-                          className="sr-only"
-                        >
-                          Libellé du revenu
-                        </label>
+                      <div className="flex gap-1 sm:gap-2">
                         <input
                           type="text"
                           value={libelle}
                           onChange={(e) => setLibelle(e.target.value)}
+                          title="Libellé du revenu"
                           placeholder="Libellé"
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none"
-                          id={`libelle-${jour.date}`}
+                          className="flex-1 border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-900 outline-none"
                         />
-                        <label
-                          htmlFor={`montant-${jour.date}`}
-                          className="sr-only"
-                        >
-                          Montant du revenu
-                        </label>
                         <input
                           type="number"
                           value={montant}
                           onChange={(e) => setMontant(e.target.value)}
+                          title="Montant du revenu"
                           placeholder="FC"
-                          className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none"
-                          id={`montant-${jour.date}`}
+                          className="w-20 sm:w-24 border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-900 outline-none"
                         />
                         <button
                           onClick={() => addRevenuMutation.mutate(jour.date)}
                           disabled={!libelle || !montant}
-                          className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-40"
+                          className="px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium disabled:opacity-40"
                         >
                           OK
                         </button>
                         <button
                           onClick={() => setShowForm(null)}
-                          className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm"
+                          className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm"
                         >
                           ✕
                         </button>
@@ -337,19 +311,18 @@ export default function ObjectifsPage() {
                     ) : (
                       <button
                         onClick={() => setShowForm(jour.date)}
-                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium"
                       >
                         + Ajouter un revenu
                       </button>
                     )}
                   </div>
 
-                  {/* Total jour */}
                   <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
                       Total du jour
                     </span>
-                    <span className="font-bold text-gray-900">
+                    <span className="text-sm sm:text-base font-bold text-gray-900">
                       {jour.total_jour.toLocaleString()} FC
                     </span>
                   </div>
@@ -361,28 +334,66 @@ export default function ObjectifsPage() {
       </div>
 
       {/* Totaux */}
-      <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
-        <div className="grid grid-cols-3 gap-4 text-center">
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-5 border border-gray-200">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
           <div>
-            <p className="text-sm text-gray-500">Total crédits</p>
-            <p className="text-xl font-bold text-blue-600">
+            <p className="text-[10px] sm:text-sm text-gray-500">Crédits</p>
+            <p className="text-sm sm:text-xl font-bold text-blue-600">
               {obj.total_credits.toLocaleString()} FC
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total autres</p>
-            <p className="text-xl font-bold text-green-600">
+            <p className="text-[10px] sm:text-sm text-gray-500">Autres</p>
+            <p className="text-sm sm:text-xl font-bold text-green-600">
               {obj.total_autres.toLocaleString()} FC
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total général</p>
-            <p className="text-xl font-bold text-gray-900">
+            <p className="text-[10px] sm:text-sm text-gray-500">Total</p>
+            <p className="text-sm sm:text-xl font-bold text-gray-900">
               {obj.total_general.toLocaleString()} FC
             </p>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Card({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  const bg =
+    {
+      blue: "bg-blue-50",
+      green: "bg-green-50",
+      amber: "bg-amber-50",
+      purple: "bg-purple-50",
+    }[color] || "bg-gray-50";
+  const text =
+    {
+      blue: "text-blue-600",
+      green: "text-green-600",
+      amber: "text-amber-600",
+      purple: "text-purple-600",
+    }[color] || "text-gray-600";
+  const val =
+    {
+      blue: "text-blue-900",
+      green: "text-green-900",
+      amber: "text-amber-900",
+      purple: "text-purple-900",
+    }[color] || "text-gray-900";
+  return (
+    <div className={`${bg} rounded-xl p-3 sm:p-4 text-center`}>
+      <p className={`text-[10px] sm:text-xs ${text} font-medium`}>{label}</p>
+      <p className={`text-sm sm:text-xl font-bold ${val}`}>{value}</p>
     </div>
   );
 }

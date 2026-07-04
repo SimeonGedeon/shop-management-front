@@ -1,4 +1,4 @@
-// app/(protected)/mm/page.tsx
+// app/(protected)/mm/page.tsx - Version responsive
 
 "use client";
 
@@ -21,23 +21,17 @@ export default function MMPage() {
     montant: "",
   });
   const [message, setMessage] = useState("");
-
-  // Matin
   const [matinForm, setMatinForm] = useState({
     liquide_matin: "",
     mm_mpesa_matin: "",
     mm_orange_matin: "",
     mm_airtel_matin: "",
   });
-
-  // Soir
   const [soirForm, setSoirForm] = useState({
     mm_mpesa_soir: "",
     mm_orange_soir: "",
     mm_airtel_soir: "",
   });
-
-  // Clôture confirmation
   const [showClotureConfirm, setShowClotureConfirm] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
@@ -49,7 +43,7 @@ export default function MMPage() {
     refetchInterval: 30000,
   });
 
-  const { data: caisseData } = useQuery({
+  const { data: caisseData, refetch: refetchCaisse } = useQuery({
     queryKey: ["caisse-etat"],
     queryFn: async () => {
       const r = await api.get("/caisse/etat");
@@ -74,7 +68,7 @@ export default function MMPage() {
     }
   }, [caisseData]);
 
-  // Mutations transactions
+  // Mutations (création, update, delete, matin, soir, clôture, rouvrir) - identiques, juste ajouter refetchCaisse dans rouvrir
   const createMutation = useMutation({
     mutationFn: () => api.post("/mm/transactions", form),
     onSuccess: () => {
@@ -90,7 +84,6 @@ export default function MMPage() {
       setTimeout(() => setMessage(""), 5000);
     },
   });
-
   const updateMutation = useMutation({
     mutationFn: () => api.put(`/mm/transactions/${editId}`, form),
     onSuccess: () => {
@@ -106,7 +99,6 @@ export default function MMPage() {
       setTimeout(() => setMessage(""), 5000);
     },
   });
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/mm/transactions/${id}`),
     onSuccess: () => {
@@ -116,8 +108,6 @@ export default function MMPage() {
       setTimeout(() => setMessage(""), 3000);
     },
   });
-
-  // Matin
   const matinMutation = useMutation({
     mutationFn: () => api.post("/caisse/matin", matinForm),
     onSuccess: () => {
@@ -128,11 +118,8 @@ export default function MMPage() {
     },
     onError: (err: any) => {
       setMessage("❌ " + (err.response?.data?.message || "Erreur"));
-      setTimeout(() => setMessage(""), 5000);
     },
   });
-
-  // Soir
   const soirMutation = useMutation({
     mutationFn: () => api.post("/caisse/soir", soirForm),
     onSuccess: () => {
@@ -143,11 +130,8 @@ export default function MMPage() {
     },
     onError: (err: any) => {
       setMessage("❌ " + (err.response?.data?.message || "Erreur"));
-      setTimeout(() => setMessage(""), 5000);
     },
   });
-
-  // Clôture
   const clotureMutation = useMutation({
     mutationFn: () => api.post("/caisse/cloturer"),
     onSuccess: () => {
@@ -159,16 +143,15 @@ export default function MMPage() {
     },
     onError: (err: any) => {
       setMessage("❌ " + (err.response?.data?.message || "Erreur"));
-      setTimeout(() => setMessage(""), 5000);
     },
   });
-
   const rouvrirMutation = useMutation({
     mutationFn: () => api.post("/caisse/rouvrir"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["caisse-etat"] });
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
       queryClient.invalidateQueries({ queryKey: ["mm-transactions"] });
+      refetchCaisse();
       setMessage("✅ Journée rouverte");
       setTimeout(() => setMessage(""), 3000);
     },
@@ -185,7 +168,6 @@ export default function MMPage() {
       numero: "",
       montant: "",
     });
-
   const handleEdit = (tx: any) => {
     setEditId(tx.id);
     setForm({
@@ -198,7 +180,6 @@ export default function MMPage() {
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     editId ? updateMutation.mutate() : createMutation.mutate();
@@ -225,279 +206,210 @@ export default function MMPage() {
     );
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4 p-3 sm:p-4 lg:p-6">
+      {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">📱 Mobile Money</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+            📱 Mobile Money
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500">
             {isCloture ? "🔒 Journée clôturée" : "🟢 Journée ouverte"}
           </p>
         </div>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
+          className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
         >
-          🔄 Actualiser
+          🔄
         </button>
       </div>
+
       {message && (
         <div
-          className={`p-3 rounded-lg text-sm font-medium ${message.includes("✅") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}
+          className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium ${message.includes("✅") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}
         >
           {message}
         </div>
       )}
+
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit overflow-x-auto">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === tab.id ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition ${activeTab === tab.id ? "bg-white text-blue-600 shadow-sm" : "text-gray-500"}`}
           >
-            {tab.icon} {tab.label}
+            <span className="sm:hidden">{tab.icon}</span>
+            <span className="hidden sm:inline">
+              {tab.icon} {tab.label}
+            </span>
           </button>
         ))}
       </div>
-      {/* Soldes actuels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      {/* Soldes actuels - Cards responsives */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {operateurs.map((op) => (
           <div
             key={op}
-            className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 text-center"
+            className="bg-white rounded-xl shadow-sm p-3 sm:p-5 border border-gray-200 text-center"
           >
-            <p className="text-sm text-gray-500 mb-1">{op}</p>
-            <p className="text-2xl font-bold text-blue-900">
+            <p className="text-[10px] sm:text-sm text-gray-500 mb-0.5 sm:mb-1">
+              {op}
+            </p>
+            <p className="text-sm sm:text-2xl font-bold text-blue-900">
               {(soldes[op] || 0).toLocaleString()} FC
             </p>
           </div>
         ))}
       </div>
+
       {/* Onglet Matin */}
       {activeTab === "matin" && (
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
             🌅 Déclaration du matin
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-xs sm:text-sm text-gray-500 mb-3">
             {isCloture
               ? "Journée clôturée"
               : "Saisissez les soldes d'ouverture"}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                💵 Liquide (FC)
-              </label>
-              <input
-                type="number"
-                value={matinForm.liquide_matin}
-                onChange={(e) =>
-                  setMatinForm({ ...matinForm, liquide_matin: e.target.value })
-                }
-                title="Liquide"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                disabled={isCloture}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                📱 M-PESA (FC)
-              </label>
-              <input
-                type="number"
-                value={matinForm.mm_mpesa_matin}
-                onChange={(e) =>
-                  setMatinForm({ ...matinForm, mm_mpesa_matin: e.target.value })
-                }
-                title="M-PESA (FC)"
-                placeholder="Solde M-PESA matin"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                disabled={isCloture}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                📱 Orange Money (FC)
-              </label>
-              <input
-                type="number"
-                value={matinForm.mm_orange_matin}
-                onChange={(e) =>
-                  setMatinForm({
-                    ...matinForm,
-                    mm_orange_matin: e.target.value,
-                  })
-                }
-                title="Orange Money (FC)"
-                placeholder="Solde Orange Money matin"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                disabled={isCloture}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                📱 Airtel Money (FC)
-              </label>
-              <input
-                type="number"
-                value={matinForm.mm_airtel_matin}
-                onChange={(e) =>
-                  setMatinForm({
-                    ...matinForm,
-                    mm_airtel_matin: e.target.value,
-                  })
-                }
-                title="Airtel Money (FC)"
-                placeholder="Solde Airtel Money matin"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                disabled={isCloture}
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <Input
+              label="💵 Liquide (FC)"
+              value={matinForm.liquide_matin}
+              onChange={(v) => setMatinForm({ ...matinForm, liquide_matin: v })}
+              disabled={isCloture}
+            />
+            <Input
+              label="📱 M-PESA (FC)"
+              value={matinForm.mm_mpesa_matin}
+              onChange={(v) =>
+                setMatinForm({ ...matinForm, mm_mpesa_matin: v })
+              }
+              disabled={isCloture}
+            />
+            <Input
+              label="📱 Orange Money (FC)"
+              value={matinForm.mm_orange_matin}
+              onChange={(v) =>
+                setMatinForm({ ...matinForm, mm_orange_matin: v })
+              }
+              disabled={isCloture}
+            />
+            <Input
+              label="📱 Airtel Money (FC)"
+              value={matinForm.mm_airtel_matin}
+              onChange={(v) =>
+                setMatinForm({ ...matinForm, mm_airtel_matin: v })
+              }
+              disabled={isCloture}
+            />
           </div>
           {!isCloture && (
-            <button
+            <Btn
               onClick={() => matinMutation.mutate()}
-              disabled={matinMutation.isPending}
-              className="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-40"
-            >
-              {matinMutation.isPending ? "..." : "💾 Enregistrer le matin"}
-            </button>
+              loading={matinMutation.isPending}
+              label="Enregistrer le matin"
+            />
           )}
         </div>
       )}
+
       {/* Onglet Soir */}
       {activeTab === "soir" && (
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
             🌆 Déclaration du soir
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-xs sm:text-sm text-gray-500 mb-3">
             {isCloture
               ? "Journée clôturée"
               : "Saisissez les soldes MM restants"}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                📱 M-PESA soir (FC)
-              </label>
-              <input
-                type="number"
-                value={soirForm.mm_mpesa_soir}
-                onChange={(e) =>
-                  setSoirForm({ ...soirForm, mm_mpesa_soir: e.target.value })
-                }
-                title="M-PESA soir"
-                placeholder="Solde M-PESA soir"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                disabled={isCloture}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                📱 Orange Money soir (FC)
-              </label>
-              <input
-                type="number"
-                value={soirForm.mm_orange_soir}
-                onChange={(e) =>
-                  setSoirForm({ ...soirForm, mm_orange_soir: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                title="Orange Money soir"
-                placeholder="Solde Orange Money soir"
-                disabled={isCloture}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                📱 Airtel Money soir (FC)
-              </label>
-              <input
-                type="number"
-                value={soirForm.mm_airtel_soir}
-                onChange={(e) =>
-                  setSoirForm({ ...soirForm, mm_airtel_soir: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                min="0"
-                title="Airtel Money soir"
-                placeholder="Solde Airtel Money soir"
-                disabled={isCloture}
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+            <Input
+              label="📱 M-PESA soir (FC)"
+              value={soirForm.mm_mpesa_soir}
+              onChange={(v) => setSoirForm({ ...soirForm, mm_mpesa_soir: v })}
+              disabled={isCloture}
+            />
+            <Input
+              label="📱 Orange Money soir (FC)"
+              value={soirForm.mm_orange_soir}
+              onChange={(v) => setSoirForm({ ...soirForm, mm_orange_soir: v })}
+              disabled={isCloture}
+            />
+            <Input
+              label="📱 Airtel Money soir (FC)"
+              value={soirForm.mm_airtel_soir}
+              onChange={(v) => setSoirForm({ ...soirForm, mm_airtel_soir: v })}
+              disabled={isCloture}
+            />
           </div>
           {!isCloture && (
-            <button
+            <Btn
               onClick={() => soirMutation.mutate()}
-              disabled={soirMutation.isPending}
-              className="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-40"
-            >
-              {soirMutation.isPending ? "..." : "💾 Enregistrer le soir"}
-            </button>
+              loading={soirMutation.isPending}
+              label="Enregistrer le soir"
+            />
           )}
         </div>
       )}
+
       {/* Onglet Clôture */}
       {activeTab === "cloture" && (
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-            🔒 Clôture Mobile Money
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
+            🔒 Clôture
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            {isCloture
-              ? "✅ Journée déjà clôturée"
-              : "Archivez les soldes MM de la journée"}
+          <p className="text-xs sm:text-sm text-gray-500 mb-3">
+            {isCloture ? "✅ Journée déjà clôturée" : "Archivez les soldes MM"}
           </p>
           {!isCloture &&
             (!showClotureConfirm ? (
               <button
                 onClick={() => setShowClotureConfirm(true)}
-                className="w-full md:w-auto bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-red-700"
+                className="w-full sm:w-auto bg-red-600 text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm font-semibold"
               >
-                🔒 Clôturer la journée MM
+                🔒 Clôturer
               </button>
             ) : (
-              <div className="bg-red-50 rounded-xl p-4 border border-red-200">
-                <p className="text-red-800 font-medium mb-3">
+              <div className="bg-red-50 rounded-xl p-3 sm:p-4 border border-red-200">
+                <p className="text-red-800 font-medium text-sm mb-3">
                   ⚠️ Confirmer la clôture ?
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     onClick={() => clotureMutation.mutate()}
                     disabled={clotureMutation.isPending}
-                    className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-40"
+                    className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-semibold"
                   >
-                    ✅ Oui, clôturer
+                    ✅ Oui
                   </button>
                   <button
                     onClick={() => setShowClotureConfirm(false)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300"
+                    className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm"
                   >
                     Annuler
                   </button>
                 </div>
               </div>
             ))}
-
           {isCloture && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-amber-600 mb-2">
-                ⚠️ Admin : vous pouvez rouvrir la journée pour modification
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-xs sm:text-sm text-amber-600 mb-2">
+                ⚠️ Admin : rouvrir pour modification
               </p>
               <button
                 onClick={() => rouvrirMutation.mutate()}
                 disabled={rouvrirMutation.isPending}
-                className="w-full md:w-auto bg-amber-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-amber-700 disabled:opacity-40"
+                className="w-full sm:w-auto bg-amber-600 text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm font-semibold"
               >
-                {rouvrirMutation.isPending ? "..." : "🔓 Rouvrir la journée"}
+                🔓 Rouvrir
               </button>
             </div>
           )}
@@ -507,22 +419,23 @@ export default function MMPage() {
       {/* Onglet Transactions */}
       {activeTab === "transactions" && (
         <>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-green-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-green-600">Total dépôts</p>
-              <p className="text-xl font-bold text-green-900">
-                +{(totaux.total_depots || 0).toLocaleString()} FC
+          {/* Résumé */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="bg-green-50 rounded-xl p-3 sm:p-4 text-center">
+              <p className="text-[10px] sm:text-xs text-green-600">Dépôts</p>
+              <p className="text-sm sm:text-xl font-bold text-green-900">
+                +{(totaux.total_depots || 0).toLocaleString()}
               </p>
             </div>
-            <div className="bg-red-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-red-600">Total retraits</p>
-              <p className="text-xl font-bold text-red-900">
-                -{(totaux.total_retraits || 0).toLocaleString()} FC
+            <div className="bg-red-50 rounded-xl p-3 sm:p-4 text-center">
+              <p className="text-[10px] sm:text-xs text-red-600">Retraits</p>
+              <p className="text-sm sm:text-xl font-bold text-red-900">
+                -{(totaux.total_retraits || 0).toLocaleString()}
               </p>
             </div>
-            <div className="bg-blue-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-blue-600">Transactions</p>
-              <p className="text-xl font-bold text-blue-900">
+            <div className="bg-blue-50 rounded-xl p-3 sm:p-4 text-center">
+              <p className="text-[10px] sm:text-xs text-blue-600">Total</p>
+              <p className="text-sm sm:text-xl font-bold text-blue-900">
                 {totaux.total_transactions || 0}
               </p>
             </div>
@@ -535,30 +448,30 @@ export default function MMPage() {
                 setEditId(null);
                 setShowForm(!showForm);
               }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition ${showForm && !editId ? "bg-gray-200 text-gray-700" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold ${showForm && !editId ? "bg-gray-200 text-gray-700" : "bg-blue-600 text-white"}`}
             >
-              {showForm && !editId ? "✕ Fermer" : "+ Nouvelle transaction"}
+              {showForm && !editId ? "✕ Fermer" : "+ Transaction"}
             </button>
           )}
 
           {showForm && !isCloture && (
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
                 {editId ? "✏️ Modifier" : "📝 Nouvelle transaction"}
               </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       Opérateur
                     </label>
                     <select
                       value={form.operateur}
+                      title="Opérateur"
                       onChange={(e) =>
                         setForm({ ...form, operateur: e.target.value })
                       }
-                      title="Sélectionner l'opérateur"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:py-2.5 text-sm text-gray-900 outline-none"
                     >
                       {operateurs.map((op) => (
                         <option key={op} value={op}>
@@ -568,29 +481,29 @@ export default function MMPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       Type
                     </label>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setForm({ ...form, type: "depot" })}
-                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium ${form.type === "depot" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                        className={`flex-1 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium ${form.type === "depot" ? "bg-green-600 text-white" : "bg-gray-100"}`}
                       >
                         📥 Dépôt
                       </button>
                       <button
                         type="button"
                         onClick={() => setForm({ ...form, type: "retrait" })}
-                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium ${form.type === "retrait" ? "bg-red-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                        className={`flex-1 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium ${form.type === "retrait" ? "bg-red-600 text-white" : "bg-gray-100"}`}
                       >
                         📤 Retrait
                       </button>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nom du client
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      Client
                     </label>
                     <input
                       type="text"
@@ -598,12 +511,12 @@ export default function MMPage() {
                       onChange={(e) =>
                         setForm({ ...form, client_nom: e.target.value })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                      placeholder="Ex: Jean Kazadi"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:py-2.5 text-sm text-gray-900 outline-none"
+                      placeholder="Nom"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       Numéro
                     </label>
                     <input
@@ -612,12 +525,12 @@ export default function MMPage() {
                       onChange={(e) =>
                         setForm({ ...form, numero: e.target.value })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
-                      placeholder="Ex: 0812345678"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:py-2.5 text-sm text-gray-900 outline-none"
+                      placeholder="0812345678"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       Montant (FC)
                     </label>
                     <input
@@ -626,9 +539,9 @@ export default function MMPage() {
                       onChange={(e) =>
                         setForm({ ...form, montant: e.target.value })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:py-2.5 text-sm text-gray-900 outline-none"
                       min="100"
-                      placeholder="Ex: 10000"
+                      placeholder="10000"
                     />
                   </div>
                 </div>
@@ -638,7 +551,7 @@ export default function MMPage() {
                     disabled={
                       createMutation.isPending || updateMutation.isPending
                     }
-                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-40"
+                    className="px-4 py-2 sm:px-6 sm:py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold"
                   >
                     {editId ? "💾 Modifier" : "💾 Enregistrer"}
                   </button>
@@ -648,7 +561,7 @@ export default function MMPage() {
                       setShowForm(false);
                       setEditId(null);
                     }}
-                    className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+                    className="px-4 py-2 sm:px-6 sm:py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm"
                   >
                     Annuler
                   </button>
@@ -657,84 +570,82 @@ export default function MMPage() {
             </div>
           )}
 
+          {/* Tableau */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900">
+            <div className="p-3 sm:p-4 border-b border-gray-200">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                 📋 Transactions du jour
               </h3>
             </div>
             {transactions.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                Aucune transaction aujourd'hui
+              <div className="p-6 text-center text-gray-500 text-sm">
+                Aucune transaction
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-4 py-2 font-medium text-gray-600">
+                      <th className="text-left px-2 sm:px-4 py-2 font-medium text-gray-600">
                         Heure
                       </th>
-                      <th className="text-left px-4 py-2 font-medium text-gray-600">
+                      <th className="text-left px-2 sm:px-4 py-2 font-medium text-gray-600">
                         Opérateur
                       </th>
-                      <th className="text-left px-4 py-2 font-medium text-gray-600">
+                      <th className="hidden sm:table-cell text-left px-2 sm:px-4 py-2 font-medium text-gray-600">
                         Client
                       </th>
-                      <th className="text-left px-4 py-2 font-medium text-gray-600">
+                      <th className="text-left px-2 sm:px-4 py-2 font-medium text-gray-600">
                         Type
                       </th>
-                      <th className="text-right px-4 py-2 font-medium text-gray-600">
+                      <th className="text-right px-2 sm:px-4 py-2 font-medium text-gray-600">
                         Montant
                       </th>
-                      <th className="text-right px-4 py-2 font-medium text-gray-600">
-                        Solde après
+                      <th className="hidden sm:table-cell text-right px-2 sm:px-4 py-2 font-medium text-gray-600">
+                        Solde
                       </th>
                       {!isCloture && (
-                        <th className="text-center px-2 py-2 font-medium text-gray-600">
-                          Actions
-                        </th>
+                        <th className="text-center px-2 py-2 font-medium text-gray-600"></th>
                       )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {transactions.map((tx: any) => (
                       <tr key={tx.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-xs text-gray-500">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-500">
                           {new Date(tx.created_at).toLocaleTimeString("fr-FR", {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium">
                           {tx.operateur}
                         </td>
-                        <td className="px-4 py-3 text-gray-700">
+                        <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-gray-700">
                           {tx.client_nom || "—"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${tx.type === "depot" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                            className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${tx.type === "depot" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                           >
-                            {tx.type === "depot" ? "📥 Dépôt" : "📤 Retrait"}
+                            {tx.type === "depot" ? "📥" : "📤"}
                           </span>
                         </td>
                         <td
-                          className={`px-4 py-3 text-right font-semibold ${tx.type === "depot" ? "text-green-600" : "text-red-600"}`}
+                          className={`px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold ${tx.type === "depot" ? "text-green-600" : "text-red-600"}`}
                         >
                           {tx.type === "depot" ? "+" : "-"}
-                          {tx.montant.toLocaleString()} FC
+                          {tx.montant.toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
-                          {(tx.solde_apres || 0).toLocaleString()} FC
+                        <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-right">
+                          {(tx.solde_apres || 0).toLocaleString()}
                         </td>
                         {!isCloture && (
-                          <td className="px-2 py-3">
+                          <td className="px-2 py-2 sm:py-3">
                             <div className="flex justify-center gap-1">
                               <button
                                 onClick={() => handleEdit(tx)}
-                                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                                title="Modifier"
+                                className="p-1 text-blue-600 text-xs"
                               >
                                 ✏️
                               </button>
@@ -743,8 +654,7 @@ export default function MMPage() {
                                   if (confirm("Supprimer ?"))
                                     deleteMutation.mutate(tx.id);
                                 }}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
-                                title="Supprimer"
+                                className="p-1 text-red-500 text-xs"
                               >
                                 🗑️
                               </button>
@@ -761,5 +671,55 @@ export default function MMPage() {
         </>
       )}
     </div>
+  );
+}
+
+// Petits composants internes
+function Input({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <input
+        type="number"
+        value={value}
+        placeholder={label}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 sm:py-2.5 text-sm text-gray-900 outline-none"
+        min="0"
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
+function Btn({
+  onClick,
+  loading,
+  label,
+}: {
+  onClick: () => void;
+  loading: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-40"
+    >
+      {loading ? "..." : `💾 ${label}`}
+    </button>
   );
 }
