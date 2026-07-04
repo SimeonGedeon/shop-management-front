@@ -28,6 +28,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: "Objectifs", href: "/objectifs", icon: ChartBarIcon }, // ← Ajouter
   { name: "Paramètres", href: "/settings", icon: Cog6ToothIcon },
 ];
 

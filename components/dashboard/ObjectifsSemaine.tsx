@@ -44,21 +44,17 @@ export default function ObjectifsSemaine() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/objectif/autres-revenus/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["objectifs-semaine"] });
-    },
-  });
-
   if (isLoading || !data?.data) return null;
 
   const obj = data.data;
   const jours = obj.jours || [];
-  const maxBar = Math.max(obj.objectif_hebdomadaire, obj.total_general, 1);
+  const objectif = obj.objectif_hebdomadaire;
+  const totalGeneral = obj.total_general;
+  const progression = Math.min(obj.progression, 100);
+  const depasse = obj.total_general > objectif;
 
-  // Récupérer les autres revenus depuis la réponse
-  const autresRevenus = obj.autres_revenus || {};
+  // La barre max = l'objectif (pour voir la progression)
+  const barMax = objectif;
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -75,49 +71,64 @@ export default function ObjectifsSemaine() {
         </div>
       )}
 
-      {/* Résumé */}
+      {/* Cartes résumé */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-blue-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-blue-600">Objectif</p>
+          <p className="text-xs text-blue-600 font-medium">Objectif</p>
           <p className="text-lg font-bold text-blue-900">
-            {obj.objectif_hebdomadaire.toLocaleString()} FC
+            {objectif.toLocaleString()} FC
           </p>
         </div>
-        <div className="bg-green-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-green-600">Réalisé</p>
+        <div
+          className={`rounded-lg p-3 text-center ${depasse ? "bg-green-100" : "bg-green-50"}`}
+        >
+          <p className="text-xs text-green-600 font-medium">Réalisé</p>
           <p className="text-lg font-bold text-green-900">
-            {obj.total_general.toLocaleString()} FC
+            {totalGeneral.toLocaleString()} FC
           </p>
+          {depasse && (
+            <p className="text-xs text-green-600 mt-0.5">🎉 Dépassé !</p>
+          )}
         </div>
-        <div className="bg-amber-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-amber-600">Reste</p>
+        <div
+          className={`rounded-lg p-3 text-center ${obj.reste > 0 ? "bg-amber-50" : "bg-green-50"}`}
+        >
+          <p className="text-xs text-amber-600 font-medium">Reste</p>
           <p className="text-lg font-bold text-amber-900">
             {obj.reste.toLocaleString()} FC
           </p>
         </div>
-        <div className="bg-purple-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-purple-600">Progression</p>
-          <p className="text-lg font-bold text-purple-900">
-            {obj.progression}%
-          </p>
+        <div
+          className={`rounded-lg p-3 text-center ${depasse ? "bg-green-100" : "bg-purple-50"}`}
+        >
+          <p className="text-xs text-purple-600 font-medium">Progression</p>
+          <p className="text-lg font-bold text-purple-900">{progression}%</p>
         </div>
       </div>
 
-      {/* Barre de progression */}
-      <div className="mb-4">
+      {/* Barre de progression globale */}
+      <div className="mb-2">
         <div className="flex justify-between text-xs text-gray-500 mb-1">
           <span>0 FC</span>
-          <span>{obj.objectif_hebdomadaire.toLocaleString()} FC</span>
+          <span>{objectif.toLocaleString()} FC</span>
         </div>
         <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`h-4 rounded-full transition-all duration-500 ${
-              obj.progression >= 100 ? "bg-green-500" : "bg-blue-500"
+              depasse ? "bg-green-500" : "bg-blue-500"
             }`}
-            style={{ width: `${Math.min(obj.progression, 100)}%` }}
+            style={{
+              width: `${Math.min((totalGeneral / barMax) * 100, 100)}%`,
+            }}
           ></div>
         </div>
       </div>
+      {depasse && (
+        <p className="text-xs text-green-600 mb-4">
+          Objectif dépassé de +{(totalGeneral - objectif).toLocaleString()} FC (
+          {(obj.progression - 100).toFixed(1)}% au-dessus)
+        </p>
+      )}
 
       {/* Détail par jour */}
       <div className="space-y-2 mb-6">
@@ -125,11 +136,10 @@ export default function ObjectifsSemaine() {
           📊 Détail par jour
         </p>
         {jours.map((jour: any) => {
-          const pct = maxBar > 0 ? (jour.total_jour / maxBar) * 100 : 0;
-          const autresJour = autresRevenus[jour.date] || {
-            total: 0,
-            details: [],
-          };
+          // Pourcentage par rapport à l'objectif
+          const pct = barMax > 0 ? (jour.total_jour / barMax) * 100 : 0;
+          const pctCredits =
+            barMax > 0 ? (jour.benefice_credits / barMax) * 100 : 0;
 
           return (
             <div key={jour.date} className="flex items-center gap-3">
@@ -138,19 +148,12 @@ export default function ObjectifsSemaine() {
               </span>
               <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
                 {/* Barre crédits */}
-                <div
-                  className="absolute left-0 top-0 h-full bg-blue-400 rounded-full"
-                  style={{
-                    width: `${Math.min((jour.benefice_credits / maxBar) * 100, 100)}%`,
-                  }}
-                ></div>
-                {/* Barre autres */}
-                <div
-                  className="absolute left-0 top-0 h-full bg-green-400 rounded-full"
-                  style={{
-                    width: `${Math.min((autresJour.total / maxBar) * 100, 100)}%`,
-                  }}
-                ></div>
+                {pctCredits > 0 && (
+                  <div
+                    className="absolute left-0 top-0 h-full bg-blue-400 rounded-full"
+                    style={{ width: `${Math.min(pctCredits, 100)}%` }}
+                  ></div>
+                )}
               </div>
               <span className="w-24 text-right text-xs font-medium text-gray-700">
                 {jour.total_jour > 0
@@ -162,7 +165,7 @@ export default function ObjectifsSemaine() {
                   setSelectedDate(jour.date);
                   setShowForm(true);
                 }}
-                className="text-gray-400 hover:text-blue-600 text-xs"
+                className="text-gray-400 hover:text-blue-600 text-xs font-medium"
                 title="Ajouter autre revenu"
               >
                 +
@@ -175,18 +178,30 @@ export default function ObjectifsSemaine() {
       {/* Légende */}
       <div className="flex items-center gap-4 text-xs text-gray-400 mb-4">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-blue-400 rounded-full"></div> Crédits
+          <div className="w-3 h-3 bg-blue-400 rounded-full"></div> Bénéfices
+          crédits
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-green-400 rounded-full"></div> Autres
-        </div>
+        <span>
+          Total :{" "}
+          <strong className="text-gray-600">
+            {obj.total_credits.toLocaleString()} FC
+          </strong>{" "}
+          +{" "}
+          <strong className="text-gray-600">
+            {obj.total_autres.toLocaleString()} FC
+          </strong>{" "}
+          autres ={" "}
+          <strong className="text-gray-800">
+            {totalGeneral.toLocaleString()} FC
+          </strong>
+        </span>
       </div>
 
       {/* Formulaire ajout autre revenu */}
       {showForm && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <p className="text-sm font-medium text-gray-700 mb-2">
-            Ajouter un revenu pour le{" "}
+            + Revenu du{" "}
             {new Date(selectedDate).toLocaleDateString("fr-FR", {
               day: "numeric",
               month: "short",
