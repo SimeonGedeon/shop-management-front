@@ -5,7 +5,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
 
 export default function ProtectedLayout({
   children,
@@ -26,22 +25,22 @@ export default function ProtectedLayout({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-500">Chargement...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-3 border-blue-600 border-t-transparent mx-auto" />
+          <p className="mt-4 text-gray-500 text-sm">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
+      {/* Contenu principal avec padding pour desktop et mobile */}
+      <main className="lg:pl-64 pt-14 lg:pt-0 min-h-screen">
+        <div className="p-3 sm:p-4 lg:p-6">{children}</div>
+      </main>
     </div>
   );
 }

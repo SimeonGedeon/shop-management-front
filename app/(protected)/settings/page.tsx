@@ -51,6 +51,7 @@ export default function SettingsPage() {
         prix_vente_unitaire: s.prix_vente_unitaire?.toString() || "",
         seuil_alerte_stock: s.seuil_alerte_stock?.toString() || "",
         seuil_alerte_ecart: s.seuil_alerte_ecart?.toString() || "",
+        seuil_max_dette: s.seuil_max_dette?.toString() || "",
       }));
     }
   }, [data]);
@@ -86,6 +87,8 @@ export default function SettingsPage() {
     mutationFn: (payload: any) => api.post("/taux", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taux-actif"] });
+      queryClient.invalidateQueries({ queryKey: ["dettes-resume"] }); // ← Ajouter
+      queryClient.invalidateQueries({ queryKey: ["caisse-resume"] }); // ← Ajouter
       setMessage("✅ Taux mis à jour avec succès");
       setTimeout(() => setMessage(""), 3000);
     },
@@ -105,6 +108,7 @@ export default function SettingsPage() {
       seuil_alerte_stock: parseInt(formData.seuil_alerte_stock) || 0,
       seuil_alerte_ecart: parseInt(formData.seuil_alerte_ecart) || 0,
       objectif_hebdomadaire: parseInt(formData.objectif_hebdomadaire) || 0,
+      seuil_max_dette: parseInt(formData.seuil_max_dette) || 0,
     });
 
     // Sauvegarder les taux (seulement si modifiés)

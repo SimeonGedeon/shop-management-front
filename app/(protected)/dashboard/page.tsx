@@ -7,6 +7,7 @@ import { dashboardService } from "@/lib/api";
 import StatsCards from "@/components/dashboard/StatsCards";
 import StockProgress from "@/components/dashboard/StockProgress";
 import SalesChart from "@/components/dashboard/SalesChart";
+import ObjectifsSemaine from "@/components/dashboard/ObjectifsSemaine";
 import { AlertTriangle } from "lucide-react";
 import { useEffect } from "react";
 
@@ -250,6 +251,8 @@ export default function DashboardPage() {
           <StockProgress data={{ stocks: dashboardData?.stocks }} />
         </div>
       </div>
+
+      <ObjectifsSemaine />
 
       {/* Stats mensuelles */}
       {dashboardData?.stats_mois && (
