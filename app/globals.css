@@ -24,3 +24,42 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* app/globals.css - Ajouter à la fin */
+
+input, select, textarea {
+  color: #111827 !important; /* text-gray-900 */
+  font-weight: 500;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9CA3AF !important; /* text-gray-400 */
+  font-weight: 400;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="date"] {
+  color: #1F2937 !important;
+  font-weight: 500;
+}
+
+/* app/globals.css - ajouter à la fin */
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.2s ease-out;
+}
+
+button, a {
+  min-height: 44px; /* Taille minimum pour le doigt */
+  min-width: 44px;
+}

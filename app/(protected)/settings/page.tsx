@@ -20,6 +20,7 @@ export default function SettingsPage() {
     taux_achat_fc: "",
     taux_echange_fc: "",
     unites_par_10usd: "",
+    seuil_max_dette: "",
   });
 
   // Charger les settings
@@ -50,6 +51,7 @@ export default function SettingsPage() {
         prix_vente_unitaire: s.prix_vente_unitaire?.toString() || "",
         seuil_alerte_stock: s.seuil_alerte_stock?.toString() || "",
         seuil_alerte_ecart: s.seuil_alerte_ecart?.toString() || "",
+        seuil_max_dette: s.seuil_max_dette?.toString() || "",
       }));
     }
   }, [data]);
@@ -85,6 +87,8 @@ export default function SettingsPage() {
     mutationFn: (payload: any) => api.post("/taux", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taux-actif"] });
+      queryClient.invalidateQueries({ queryKey: ["dettes-resume"] }); // ← Ajouter
+      queryClient.invalidateQueries({ queryKey: ["caisse-resume"] }); // ← Ajouter
       setMessage("✅ Taux mis à jour avec succès");
       setTimeout(() => setMessage(""), 3000);
     },
@@ -104,6 +108,7 @@ export default function SettingsPage() {
       seuil_alerte_stock: parseInt(formData.seuil_alerte_stock) || 0,
       seuil_alerte_ecart: parseInt(formData.seuil_alerte_ecart) || 0,
       objectif_hebdomadaire: parseInt(formData.objectif_hebdomadaire) || 0,
+      seuil_max_dette: parseInt(formData.seuil_max_dette) || 0,
     });
 
     // Sauvegarder les taux (seulement si modifiés)
@@ -274,6 +279,24 @@ export default function SettingsPage() {
                 min="0"
                 placeholder="Ex: 100"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Seuil max dettes/jour (FC)
+              </label>
+              <input
+                type="number"
+                value={formData.seuil_max_dette}
+                onChange={(e) =>
+                  setFormData({ ...formData, seuil_max_dette: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-blue-500 outline-none"
+                min="0"
+                placeholder="Ex: 50000"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Montant max de dettes autorisé par jour
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">

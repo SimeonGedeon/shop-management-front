@@ -9,6 +9,7 @@ import ResumeCaisse from "@/components/caisse/ResumeCaisse";
 import DeclarationSoir from "@/components/caisse/DeclarationSoir";
 import DepensesList from "@/components/caisse/DepensesList";
 import ClotureJournee from "@/components/caisse/ClotureJournee";
+import DettesList from "@/components/caisse/DettesList";
 
 export default function CaissePage() {
   const queryClient = useQueryClient();
@@ -71,6 +72,15 @@ export default function CaissePage() {
 
       {activeTab === "resume" && (
         <ResumeCaisse data={data?.data} isLoading={isLoading} />
+      )}
+
+      {activeTab === "resume" && (
+        <>
+          <ResumeCaisse data={data?.data} isLoading={isLoading} />
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
+            <DettesList />
+          </div>
+        </>
       )}
 
       {activeTab === "declaration" && (
