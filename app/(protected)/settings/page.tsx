@@ -2,24 +2,49 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { settingsService, api } from "@/lib/api";
+import { getErrorMessage, settingsService, api } from "@/lib/api";
+
+type FormKey =
+  | "objectif_hebdomadaire"
+  | "prix_vente_unitaire"
+  | "seuil_alerte_stock"
+  | "seuil_alerte_ecart"
+  | "taux_achat_fc"
+  | "taux_echange_fc"
+  | "unites_par_10usd"
+  | "seuil_max_dette";
+
+type SettingsPayload = {
+  prix_vente_unitaire: number;
+  seuil_alerte_stock: number;
+  seuil_alerte_ecart: number;
+  objectif_hebdomadaire: number;
+  seuil_max_dette: number;
+};
+
+type TauxPayload = {
+  taux_achat_fc: number;
+  taux_echange_fc: number;
+  unites_par_10usd: number;
+};
+
+const emptyFormData: Record<FormKey, string> = {
+  objectif_hebdomadaire: "",
+  prix_vente_unitaire: "",
+  seuil_alerte_stock: "",
+  seuil_alerte_ecart: "",
+  taux_achat_fc: "",
+  taux_echange_fc: "",
+  unites_par_10usd: "",
+  seuil_max_dette: "",
+};
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
-
-  const [formData, setFormData] = useState({
-    objectif_hebdomadaire: "",
-    prix_vente_unitaire: "",
-    seuil_alerte_stock: "",
-    seuil_alerte_ecart: "",
-    taux_achat_fc: "",
-    taux_echange_fc: "",
-    unites_par_10usd: "",
-    seuil_max_dette: "",
-  });
+  const [formOverrides, setFormOverrides] = useState<Partial<Record<FormKey, string>>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -37,53 +62,54 @@ export default function SettingsPage() {
     },
   });
 
-  useEffect(() => {
+  const defaults = useMemo(() => {
+    const values = { ...emptyFormData };
+
     if (data?.settings) {
       const s = data.settings;
-      setFormData((prev) => ({
-        ...prev,
-        objectif_hebdomadaire: s.objectif_hebdomadaire?.toString() || "",
-        prix_vente_unitaire: s.prix_vente_unitaire?.toString() || "",
-        seuil_alerte_stock: s.seuil_alerte_stock?.toString() || "",
-        seuil_alerte_ecart: s.seuil_alerte_ecart?.toString() || "",
-        seuil_max_dette: s.seuil_max_dette?.toString() || "",
-      }));
+      values.objectif_hebdomadaire = s.objectif_hebdomadaire?.toString() || "";
+      values.prix_vente_unitaire = s.prix_vente_unitaire?.toString() || "";
+      values.seuil_alerte_stock = s.seuil_alerte_stock?.toString() || "";
+      values.seuil_alerte_ecart = s.seuil_alerte_ecart?.toString() || "";
+      values.seuil_max_dette = s.seuil_max_dette?.toString() || "";
     }
-  }, [data]);
 
-  useEffect(() => {
     if (tauxData?.taux) {
       const t = tauxData.taux;
-      setFormData((prev) => ({
-        ...prev,
-        taux_achat_fc: t.taux_achat_fc?.toString() || "",
-        taux_echange_fc: t.taux_echange_fc?.toString() || "",
-        unites_par_10usd: t.unites_par_10usd?.toString() || "",
-      }));
+      values.taux_achat_fc = t.taux_achat_fc?.toString() || "";
+      values.taux_echange_fc = t.taux_echange_fc?.toString() || "";
+      values.unites_par_10usd = t.unites_par_10usd?.toString() || "";
     }
-  }, [tauxData]);
+
+    return values;
+  }, [data, tauxData]);
+
+  const formData = { ...defaults, ...formOverrides };
+  const setField = (field: FormKey, value: string) => {
+    setFormOverrides((prev) => ({ ...prev, [field]: value }));
+  };
 
   const settingsMutation = useMutation({
-    mutationFn: (payload: any) => settingsService.update(payload),
+    mutationFn: (payload: SettingsPayload) => settingsService.update(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
-      setMessage("✅ Paramètres enregistrés");
+      setMessage("Paramètres enregistrés");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
     },
   });
 
   const tauxMutation = useMutation({
-    mutationFn: (payload: any) => api.post("/taux", payload),
+    mutationFn: (payload: TauxPayload) => api.post("/taux", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taux-actif"] });
-      setMessage("✅ Taux mis à jour");
+      setMessage("Taux mis à jour");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
     },
   });
 
@@ -125,9 +151,6 @@ export default function SettingsPage() {
   return (
     <div className="space-y-4 p-3 sm:p-4 lg:p-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 sm:p-2.5 bg-blue-50 rounded-xl text-blue-600 text-lg">
-          ⚙️
-        </div>
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
             Paramètres
@@ -140,7 +163,7 @@ export default function SettingsPage() {
 
       {message && (
         <div
-          className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium ${message.includes("✅") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}
+          className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium ${message.includes("Erreur") ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}
         >
           {message}
         </div>
@@ -150,14 +173,14 @@ export default function SettingsPage() {
         {/* Paramètres généraux */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-5 pb-2 sm:pb-3 border-b">
-            ⚙️ Paramètres généraux
+            Paramètres généraux
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
             <Input
               label="Objectif hebdo (FC)"
               value={formData.objectif_hebdomadaire}
               onChange={(v) =>
-                setFormData({ ...formData, objectif_hebdomadaire: v })
+                setField("objectif_hebdomadaire", v)
               }
               placeholder="150000"
             />
@@ -165,7 +188,7 @@ export default function SettingsPage() {
               label="Prix vente unitaire (FC)"
               value={formData.prix_vente_unitaire}
               onChange={(v) =>
-                setFormData({ ...formData, prix_vente_unitaire: v })
+                setField("prix_vente_unitaire", v)
               }
               placeholder="28"
             />
@@ -173,7 +196,7 @@ export default function SettingsPage() {
               label="Seuil alerte stock"
               value={formData.seuil_alerte_stock}
               onChange={(v) =>
-                setFormData({ ...formData, seuil_alerte_stock: v })
+                setField("seuil_alerte_stock", v)
               }
               placeholder="100"
             />
@@ -181,14 +204,14 @@ export default function SettingsPage() {
               label="Seuil alerte écart (FC)"
               value={formData.seuil_alerte_ecart}
               onChange={(v) =>
-                setFormData({ ...formData, seuil_alerte_ecart: v })
+                setField("seuil_alerte_ecart", v)
               }
               placeholder="5000"
             />
             <Input
               label="Seuil max dettes/jour (FC)"
               value={formData.seuil_max_dette}
-              onChange={(v) => setFormData({ ...formData, seuil_max_dette: v })}
+              onChange={(v) => setField("seuil_max_dette", v)}
               placeholder="50000"
               hint="Montant max de dettes autorisé par jour"
             />
@@ -198,20 +221,20 @@ export default function SettingsPage() {
         {/* Taux */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-5 pb-2 sm:pb-3 border-b">
-            💱 Taux de change
+            Taux de change
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
             <Input
               label="Taux d'achat (FC/10$)"
               value={formData.taux_achat_fc}
-              onChange={(v) => setFormData({ ...formData, taux_achat_fc: v })}
+              onChange={(v) => setField("taux_achat_fc", v)}
               placeholder="23500"
               hint="Prix payé pour 10$"
             />
             <Input
               label="Taux d'échange (FC/10$)"
               value={formData.taux_echange_fc}
-              onChange={(v) => setFormData({ ...formData, taux_echange_fc: v })}
+              onChange={(v) => setField("taux_echange_fc", v)}
               placeholder="22500"
               hint="Remis au client pour 10$"
             />
@@ -219,7 +242,7 @@ export default function SettingsPage() {
               label="Unités pour 10$"
               value={formData.unites_par_10usd}
               onChange={(v) =>
-                setFormData({ ...formData, unites_par_10usd: v })
+                setField("unites_par_10usd", v)
               }
               placeholder="1050"
               hint="Unités reçues pour 10$"
@@ -269,7 +292,7 @@ export default function SettingsPage() {
         >
           {settingsMutation.isPending || tauxMutation.isPending
             ? "Sauvegarde..."
-            : "💾 Enregistrer"}
+            : "Enregistrer"}
         </button>
       </form>
     </div>

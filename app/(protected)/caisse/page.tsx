@@ -7,7 +7,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { caisseService, api } from "@/lib/api";
 import ResumeCaisse from "@/components/caisse/ResumeCaisse";
 import DeclarationSoir from "@/components/caisse/DeclarationSoir";
-import DepensesList from "@/components/caisse/DepensesList";
 import ClotureJournee from "@/components/caisse/ClotureJournee";
 import DettesList from "@/components/caisse/DettesList";
 

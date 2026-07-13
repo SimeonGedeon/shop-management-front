@@ -11,6 +11,12 @@ interface Reseau {
   prix_vente_unitaire: number;
 }
 
+interface ReseauConfig {
+  id: number;
+  nom: string;
+  prix_vente?: number;
+}
+
 export default function PriceCards() {
   const [reseaux, setReseaux] = useState<Reseau[]>([
     { id: 1, nom: "Orange", prix_vente_unitaire: 28 },
@@ -26,15 +32,15 @@ export default function PriceCards() {
         const settings = response.data.settings;
         if (settings?.reseaux_config) {
           setReseaux(
-            settings.reseaux_config.map((r: any) => ({
+            settings.reseaux_config.map((r: ReseauConfig) => ({
               id: r.id,
               nom: r.nom,
               prix_vente_unitaire: r.prix_vente || 28,
             })),
           );
         }
-      } catch (error) {
-        console.log("Utilisation des valeurs par défaut");
+      } catch {
+        // Les prix par défaut restent affichés si l'API publique est indisponible.
       }
     };
 

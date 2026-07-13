@@ -4,8 +4,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/lib/api";
-import { AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import SalesChart from "@/components/dashboard/SalesChart";
+import StockProgress from "@/components/dashboard/StockProgress";
 
 export default function DashboardPage() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -31,10 +33,6 @@ export default function DashboardPage() {
               <div className="h-6 bg-gray-200 rounded w-24" />
             </div>
           ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 bg-gray-200 rounded-xl h-32 animate-pulse" />
-          <div className="bg-gray-200 rounded-xl h-32 animate-pulse" />
         </div>
       </div>
     );
@@ -65,10 +63,9 @@ export default function DashboardPage() {
   const depasse = (objectif.progression || 0) > 100;
   const alertes = d.alertes || [];
   const transactions = d.transactions_recentes || [];
-
   return (
     <div className="space-y-4 p-3 sm:p-4 lg:p-6">
-      {/* En-tête compact */}
+      {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -86,8 +83,8 @@ export default function DashboardPage() {
         <span className="text-[10px] sm:text-xs text-gray-400">Auto 60s</span>
       </div>
 
-      {/* Stats Cards - Responsive */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <Card
           label="Ventes jour"
           value={`${(d.ventes_jour || 0).toLocaleString()} FC`}
@@ -107,12 +104,48 @@ export default function DashboardPage() {
           icon="💵"
         />
         <Card
-          label="Unités vendues"
-          value={(d.unites_vendues || 0).toLocaleString()}
-          color="orange"
-          icon="📦"
+          label="Dettes actives"
+          value={`${(d.objectif_detail?.total_autres || 0).toLocaleString()} FC`}
+          color="red"
+          icon="📋"
         />
       </div>
+
+      {/* Stocks rapides */}
+      {d.stocks?.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {d.stocks.map((s: any) => {
+            const pct =
+              s.stock_matin > 0
+                ? Math.round(
+                    ((s.stock_soir ?? s.stock_matin) / s.stock_matin) * 100,
+                  )
+                : 0;
+            return (
+              <div
+                key={s.id}
+                className="bg-white rounded-xl shadow-sm p-3 border border-gray-200"
+              >
+                <p className="text-xs font-medium text-gray-700 truncate">
+                  {s.reseau_nom}
+                </p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">
+                  {s.stock_soir ?? s.stock_matin}
+                </p>
+                <div className="w-full h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${pct <= 20 ? "bg-red-500" : pct <= 50 ? "bg-amber-500" : "bg-green-500"}`}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  sur {s.stock_matin} unités
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Objectif + Alertes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -192,41 +225,26 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stocks */}
-      {d.stocks?.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border border-gray-200">
-          <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-3">
+      {/* Graphique + Stocks */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+          <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-4">
+            📊 Bénéfices de la semaine
+          </h3>
+          <SalesChart
+            data={d.objectif?.progression_journaliere?.map((j: any) => ({
+              jour: j.jour?.substring(0, 3) || "",
+              benefice: j.benefice || 0,
+            }))}
+          />
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+          <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-4">
             📦 État des stocks
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            {d.stocks.map((s: any) => {
-              const pct =
-                s.stock_matin > 0
-                  ? Math.round((s.stock_actuel / s.stock_matin) * 100)
-                  : 0;
-              return (
-                <div key={s.id} className="bg-gray-50 rounded-lg p-2 sm:p-3">
-                  <p className="text-xs font-medium text-gray-700 truncate">
-                    {s.reseau_nom}
-                  </p>
-                  <p className="text-sm sm:text-lg font-bold text-gray-900">
-                    {s.stock_actuel}
-                  </p>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${pct <= 20 ? "bg-red-500" : pct <= 50 ? "bg-amber-500" : "bg-green-500"}`}
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
-                    {s.stock_matin} initial
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+          <StockProgress data={{ stocks: d.stocks }} />
         </div>
-      )}
+      </div>
 
       {/* Stats mois */}
       {d.stats_mois && (
@@ -234,17 +252,14 @@ export default function DashboardPage() {
           <MiniCard
             label="Ventes mois"
             value={`${(d.stats_mois.ventes_mois || 0).toLocaleString()} FC`}
-            color="blue"
           />
           <MiniCard
             label="Unités mois"
             value={(d.stats_mois.unites_mois || 0).toLocaleString()}
-            color="purple"
           />
           <MiniCard
             label="Bénéfice mois"
             value={`${(d.stats_mois.benefice_mois || 0).toLocaleString()} FC`}
-            color="green"
           />
         </div>
       )}
@@ -323,7 +338,6 @@ export default function DashboardPage() {
   );
 }
 
-// Composants internes
 function Card({
   label,
   value,
@@ -335,11 +349,12 @@ function Card({
   color: string;
   icon: string;
 }) {
-  const colors: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-600",
-    green: "bg-green-50 text-green-600",
-    purple: "bg-purple-50 text-purple-600",
-    orange: "bg-orange-50 text-orange-600",
+  const txt: Record<string, string> = {
+    blue: "text-blue-700",
+    green: "text-green-700",
+    purple: "text-purple-700",
+    orange: "text-orange-700",
+    red: "text-red-700",
   };
   return (
     <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-200">
@@ -347,22 +362,16 @@ function Card({
         <span className="text-base sm:text-lg">{icon}</span>
         <p className="text-[10px] sm:text-xs text-gray-500">{label}</p>
       </div>
-      <p className="text-sm sm:text-xl font-bold text-gray-900 truncate">
+      <p
+        className={`text-sm sm:text-xl font-bold ${txt[color] || "text-gray-900"} truncate`}
+      >
         {value}
       </p>
     </div>
   );
 }
 
-function MiniCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) {
+function MiniCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-200 text-center">
       <p className="text-[10px] sm:text-xs text-gray-500">{label}</p>

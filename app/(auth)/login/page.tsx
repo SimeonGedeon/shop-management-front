@@ -105,7 +105,7 @@ export default function LoginPage() {
         {/* Retour à l'accueil */}
         <div className="mt-4 text-center text-sm">
           <Link href="/" className="text-blue-600 hover:underline">
-            ← Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
         </div>
       </div>

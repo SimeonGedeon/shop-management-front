@@ -2,9 +2,54 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
+
+type MatinForm = {
+  liquide_matin: string;
+  mm_mpesa_matin: string;
+  mm_orange_matin: string;
+  mm_airtel_matin: string;
+};
+
+type SoirForm = {
+  mm_mpesa_soir: string;
+  mm_orange_soir: string;
+  mm_airtel_soir: string;
+};
+
+type TransactionForm = {
+  operateur: string;
+  type: "depot" | "retrait";
+  client_nom: string;
+  numero: string;
+  montant: string;
+};
+
+type MmTransaction = {
+  id: number;
+  operateur: string;
+  type: "depot" | "retrait";
+  client_nom?: string;
+  numero?: string;
+  montant: number;
+  solde_apres?: number;
+  created_at: string;
+};
+
+const emptyMatinForm: MatinForm = {
+  liquide_matin: "",
+  mm_mpesa_matin: "",
+  mm_orange_matin: "",
+  mm_airtel_matin: "",
+};
+
+const emptySoirForm: SoirForm = {
+  mm_mpesa_soir: "",
+  mm_orange_soir: "",
+  mm_airtel_soir: "",
+};
 
 export default function MMPage() {
   const queryClient = useQueryClient();
@@ -13,7 +58,7 @@ export default function MMPage() {
   >("transactions");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<TransactionForm>({
     operateur: "M-PESA",
     type: "depot",
     client_nom: "",
@@ -21,17 +66,8 @@ export default function MMPage() {
     montant: "",
   });
   const [message, setMessage] = useState("");
-  const [matinForm, setMatinForm] = useState({
-    liquide_matin: "",
-    mm_mpesa_matin: "",
-    mm_orange_matin: "",
-    mm_airtel_matin: "",
-  });
-  const [soirForm, setSoirForm] = useState({
-    mm_mpesa_soir: "",
-    mm_orange_soir: "",
-    mm_airtel_soir: "",
-  });
+  const [matinOverrides, setMatinOverrides] = useState<Partial<MatinForm>>({});
+  const [soirOverrides, setSoirOverrides] = useState<Partial<SoirForm>>({});
   const [showClotureConfirm, setShowClotureConfirm] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
@@ -51,24 +87,40 @@ export default function MMPage() {
     },
   });
 
-  useEffect(() => {
+  const matinDefaults = useMemo(() => {
+    const values = { ...emptyMatinForm };
     const c = caisseData?.caisse;
     if (c) {
-      setMatinForm({
-        liquide_matin: c.liquide_matin ? String(c.liquide_matin) : "",
-        mm_mpesa_matin: c.mm_mpesa_matin ? String(c.mm_mpesa_matin) : "",
-        mm_orange_matin: c.mm_orange_matin ? String(c.mm_orange_matin) : "",
-        mm_airtel_matin: c.mm_airtel_matin ? String(c.mm_airtel_matin) : "",
-      });
-      setSoirForm({
-        mm_mpesa_soir: c.mm_mpesa_soir ? String(c.mm_mpesa_soir) : "",
-        mm_orange_soir: c.mm_orange_soir ? String(c.mm_orange_soir) : "",
-        mm_airtel_soir: c.mm_airtel_soir ? String(c.mm_airtel_soir) : "",
-      });
+      values.liquide_matin = c.liquide_matin ? String(c.liquide_matin) : "";
+      values.mm_mpesa_matin = c.mm_mpesa_matin
+        ? String(c.mm_mpesa_matin)
+        : "";
+      values.mm_orange_matin = c.mm_orange_matin
+        ? String(c.mm_orange_matin)
+        : "";
+      values.mm_airtel_matin = c.mm_airtel_matin
+        ? String(c.mm_airtel_matin)
+        : "";
     }
+
+    return values;
   }, [caisseData]);
 
-  // Mutations (création, update, delete, matin, soir, clôture, rouvrir) - identiques, juste ajouter refetchCaisse dans rouvrir
+  const soirDefaults = useMemo(() => {
+    const values = { ...emptySoirForm };
+    const c = caisseData?.caisse;
+    if (c) {
+      values.mm_mpesa_soir = c.mm_mpesa_soir ? String(c.mm_mpesa_soir) : "";
+      values.mm_orange_soir = c.mm_orange_soir ? String(c.mm_orange_soir) : "";
+      values.mm_airtel_soir = c.mm_airtel_soir ? String(c.mm_airtel_soir) : "";
+    }
+
+    return values;
+  }, [caisseData]);
+
+  const matinForm = { ...matinDefaults, ...matinOverrides };
+  const soirForm = { ...soirDefaults, ...soirOverrides };
+
   const createMutation = useMutation({
     mutationFn: () => api.post("/mm/transactions", form),
     onSuccess: () => {
@@ -76,11 +128,11 @@ export default function MMPage() {
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
       setShowForm(false);
       resetForm();
-      setMessage("✅ Transaction enregistrée");
+      setMessage("Transaction enregistrée");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
       setTimeout(() => setMessage(""), 5000);
     },
   });
@@ -91,11 +143,11 @@ export default function MMPage() {
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
       setEditId(null);
       resetForm();
-      setMessage("✅ Transaction modifiée");
+      setMessage("Transaction modifiée");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
       setTimeout(() => setMessage(""), 5000);
     },
   });
@@ -104,7 +156,7 @@ export default function MMPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mm-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
-      setMessage("✅ Transaction supprimée");
+      setMessage("Transaction supprimée");
       setTimeout(() => setMessage(""), 3000);
     },
   });
@@ -113,11 +165,11 @@ export default function MMPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["caisse-etat"] });
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
-      setMessage("✅ Solde matin enregistré");
+      setMessage("Solde matin enregistré");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
     },
   });
   const soirMutation = useMutation({
@@ -125,11 +177,11 @@ export default function MMPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["caisse-etat"] });
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
-      setMessage("✅ Solde soir enregistré");
+      setMessage("Solde soir enregistré");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
     },
   });
   const clotureMutation = useMutation({
@@ -138,11 +190,11 @@ export default function MMPage() {
       queryClient.invalidateQueries({ queryKey: ["caisse-etat"] });
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
       setShowClotureConfirm(false);
-      setMessage("✅ Journée clôturée");
+      setMessage("Journée clôturée");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
     },
   });
   const rouvrirMutation = useMutation({
@@ -152,11 +204,11 @@ export default function MMPage() {
       queryClient.invalidateQueries({ queryKey: ["caisse-resume"] });
       queryClient.invalidateQueries({ queryKey: ["mm-transactions"] });
       refetchCaisse();
-      setMessage("✅ Journée rouverte");
+      setMessage("Journée rouverte");
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage("❌ " + (err.response?.data?.message || "Erreur"));
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
     },
   });
 
@@ -168,7 +220,7 @@ export default function MMPage() {
       numero: "",
       montant: "",
     });
-  const handleEdit = (tx: any) => {
+  const handleEdit = (tx: MmTransaction) => {
     setEditId(tx.id);
     setForm({
       operateur: tx.operateur,
@@ -182,20 +234,24 @@ export default function MMPage() {
   };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    editId ? updateMutation.mutate() : createMutation.mutate();
+    if (editId) {
+      updateMutation.mutate();
+    } else {
+      createMutation.mutate();
+    }
   };
 
-  const transactions = data?.transactions || [];
+  const transactions: MmTransaction[] = data?.transactions || [];
   const soldes = data?.soldes || {};
   const totaux = data?.totaux || {};
   const caisse = caisseData?.caisse || {};
   const isCloture = caisse?.statut === "cloture";
   const operateurs = ["M-PESA", "Orange Money", "Airtel Money"];
   const tabs = [
-    { id: "transactions" as const, label: "Transactions", icon: "📋" },
-    { id: "matin" as const, label: "Matin", icon: "🌅" },
-    { id: "soir" as const, label: "Soir", icon: "🌆" },
-    { id: "cloture" as const, label: "Clôture", icon: "🔒" },
+    { id: "transactions" as const, label: "Transactions", icon: "" },
+    { id: "matin" as const, label: "Matin", icon: "" },
+    { id: "soir" as const, label: "Soir", icon: "" },
+    { id: "cloture" as const, label: "Clôture", icon: "" },
   ];
 
   if (isLoading)
@@ -211,23 +267,23 @@ export default function MMPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-            📱 Mobile Money
+            Mobile Money
           </h2>
           <p className="text-xs sm:text-sm text-gray-500">
-            {isCloture ? "🔒 Journée clôturée" : "🟢 Journée ouverte"}
+            {isCloture ? "Journée clôturée" : "Journée ouverte"}
           </p>
         </div>
         <button
           onClick={() => refetch()}
           className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
         >
-          🔄
+          Actualiser
         </button>
       </div>
 
       {message && (
         <div
-          className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium ${message.includes("✅") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}
+          className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium ${message.includes("Erreur") ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}
         >
           {message}
         </div>
@@ -241,9 +297,9 @@ export default function MMPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition ${activeTab === tab.id ? "bg-white text-blue-600 shadow-sm" : "text-gray-500"}`}
           >
-            <span className="sm:hidden">{tab.icon}</span>
+            <span className="sm:hidden">{tab.label}</span>
             <span className="hidden sm:inline">
-              {tab.icon} {tab.label}
+              {tab.label}
             </span>
           </button>
         ))}
@@ -270,7 +326,7 @@ export default function MMPage() {
       {activeTab === "matin" && (
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-            🌅 Déclaration du matin
+            Déclaration du matin
           </h3>
           <p className="text-xs sm:text-sm text-gray-500 mb-3">
             {isCloture
@@ -279,32 +335,34 @@ export default function MMPage() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <Input
-              label="💵 Liquide (FC)"
+              label="Liquide (FC)"
               value={matinForm.liquide_matin}
-              onChange={(v) => setMatinForm({ ...matinForm, liquide_matin: v })}
+              onChange={(v) =>
+                setMatinOverrides((prev) => ({ ...prev, liquide_matin: v }))
+              }
               disabled={isCloture}
             />
             <Input
-              label="📱 M-PESA (FC)"
+              label="M-PESA (FC)"
               value={matinForm.mm_mpesa_matin}
               onChange={(v) =>
-                setMatinForm({ ...matinForm, mm_mpesa_matin: v })
+                setMatinOverrides((prev) => ({ ...prev, mm_mpesa_matin: v }))
               }
               disabled={isCloture}
             />
             <Input
-              label="📱 Orange Money (FC)"
+              label="Orange Money (FC)"
               value={matinForm.mm_orange_matin}
               onChange={(v) =>
-                setMatinForm({ ...matinForm, mm_orange_matin: v })
+                setMatinOverrides((prev) => ({ ...prev, mm_orange_matin: v }))
               }
               disabled={isCloture}
             />
             <Input
-              label="📱 Airtel Money (FC)"
+              label="Airtel Money (FC)"
               value={matinForm.mm_airtel_matin}
               onChange={(v) =>
-                setMatinForm({ ...matinForm, mm_airtel_matin: v })
+                setMatinOverrides((prev) => ({ ...prev, mm_airtel_matin: v }))
               }
               disabled={isCloture}
             />
@@ -323,7 +381,7 @@ export default function MMPage() {
       {activeTab === "soir" && (
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-            🌆 Déclaration du soir
+            Déclaration du soir
           </h3>
           <p className="text-xs sm:text-sm text-gray-500 mb-3">
             {isCloture
@@ -332,21 +390,27 @@ export default function MMPage() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
             <Input
-              label="📱 M-PESA soir (FC)"
+              label="M-PESA soir (FC)"
               value={soirForm.mm_mpesa_soir}
-              onChange={(v) => setSoirForm({ ...soirForm, mm_mpesa_soir: v })}
+              onChange={(v) =>
+                setSoirOverrides((prev) => ({ ...prev, mm_mpesa_soir: v }))
+              }
               disabled={isCloture}
             />
             <Input
-              label="📱 Orange Money soir (FC)"
+              label="Orange Money soir (FC)"
               value={soirForm.mm_orange_soir}
-              onChange={(v) => setSoirForm({ ...soirForm, mm_orange_soir: v })}
+              onChange={(v) =>
+                setSoirOverrides((prev) => ({ ...prev, mm_orange_soir: v }))
+              }
               disabled={isCloture}
             />
             <Input
-              label="📱 Airtel Money soir (FC)"
+              label="Airtel Money soir (FC)"
               value={soirForm.mm_airtel_soir}
-              onChange={(v) => setSoirForm({ ...soirForm, mm_airtel_soir: v })}
+              onChange={(v) =>
+                setSoirOverrides((prev) => ({ ...prev, mm_airtel_soir: v }))
+              }
               disabled={isCloture}
             />
           </div>
@@ -364,10 +428,10 @@ export default function MMPage() {
       {activeTab === "cloture" && (
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-            🔒 Clôture
+            Clôture
           </h3>
           <p className="text-xs sm:text-sm text-gray-500 mb-3">
-            {isCloture ? "✅ Journée déjà clôturée" : "Archivez les soldes MM"}
+            {isCloture ? "Journée déjà clôturée" : "Archivez les soldes MM"}
           </p>
           {!isCloture &&
             (!showClotureConfirm ? (
@@ -375,12 +439,12 @@ export default function MMPage() {
                 onClick={() => setShowClotureConfirm(true)}
                 className="w-full sm:w-auto bg-red-600 text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm font-semibold"
               >
-                🔒 Clôturer
+                Clôturer
               </button>
             ) : (
               <div className="bg-red-50 rounded-xl p-3 sm:p-4 border border-red-200">
                 <p className="text-red-800 font-medium text-sm mb-3">
-                  ⚠️ Confirmer la clôture ?
+                  Confirmer la clôture ?
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -388,7 +452,7 @@ export default function MMPage() {
                     disabled={clotureMutation.isPending}
                     className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-semibold"
                   >
-                    ✅ Oui
+                    Oui
                   </button>
                   <button
                     onClick={() => setShowClotureConfirm(false)}
@@ -402,14 +466,14 @@ export default function MMPage() {
           {isCloture && (
             <div className="mt-3 pt-3 border-t border-gray-200">
               <p className="text-xs sm:text-sm text-amber-600 mb-2">
-                ⚠️ Admin : rouvrir pour modification
+                Admin : rouvrir pour modification
               </p>
               <button
                 onClick={() => rouvrirMutation.mutate()}
                 disabled={rouvrirMutation.isPending}
                 className="w-full sm:w-auto bg-amber-600 text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm font-semibold"
               >
-                🔓 Rouvrir
+                Rouvrir
               </button>
             </div>
           )}
@@ -450,14 +514,14 @@ export default function MMPage() {
               }}
               className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold ${showForm && !editId ? "bg-gray-200 text-gray-700" : "bg-blue-600 text-white"}`}
             >
-              {showForm && !editId ? "✕ Fermer" : "+ Transaction"}
+              {showForm && !editId ? "Fermer" : "+ Transaction"}
             </button>
           )}
 
           {showForm && !isCloture && (
             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-                {editId ? "✏️ Modifier" : "📝 Nouvelle transaction"}
+                {editId ? "Modifier" : "Nouvelle transaction"}
               </h3>
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -490,14 +554,14 @@ export default function MMPage() {
                         onClick={() => setForm({ ...form, type: "depot" })}
                         className={`flex-1 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium ${form.type === "depot" ? "bg-green-600 text-white" : "bg-gray-100"}`}
                       >
-                        📥 Dépôt
+                        Dépôt
                       </button>
                       <button
                         type="button"
                         onClick={() => setForm({ ...form, type: "retrait" })}
                         className={`flex-1 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium ${form.type === "retrait" ? "bg-red-600 text-white" : "bg-gray-100"}`}
                       >
-                        📤 Retrait
+                        Retrait
                       </button>
                     </div>
                   </div>
@@ -553,7 +617,7 @@ export default function MMPage() {
                     }
                     className="px-4 py-2 sm:px-6 sm:py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold"
                   >
-                    {editId ? "💾 Modifier" : "💾 Enregistrer"}
+                    {editId ? "Modifier" : "Enregistrer"}
                   </button>
                   <button
                     type="button"
@@ -574,7 +638,7 @@ export default function MMPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-3 sm:p-4 border-b border-gray-200">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                📋 Transactions du jour
+                Transactions du jour
               </h3>
             </div>
             {transactions.length === 0 ? (
@@ -610,7 +674,7 @@ export default function MMPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {transactions.map((tx: any) => (
+                    {transactions.map((tx) => (
                       <tr key={tx.id} className="hover:bg-gray-50">
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-500">
                           {new Date(tx.created_at).toLocaleTimeString("fr-FR", {
@@ -628,7 +692,7 @@ export default function MMPage() {
                           <span
                             className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${tx.type === "depot" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                           >
-                            {tx.type === "depot" ? "📥" : "📤"}
+                            {tx.type === "depot" ? "Dépôt" : "Retrait"}
                           </span>
                         </td>
                         <td
@@ -647,7 +711,7 @@ export default function MMPage() {
                                 onClick={() => handleEdit(tx)}
                                 className="p-1 text-blue-600 text-xs"
                               >
-                                ✏️
+                                Modifier
                               </button>
                               <button
                                 onClick={() => {
@@ -656,7 +720,7 @@ export default function MMPage() {
                                 }}
                                 className="p-1 text-red-500 text-xs"
                               >
-                                🗑️
+                                Supprimer
                               </button>
                             </div>
                           </td>
@@ -719,7 +783,7 @@ function Btn({
       disabled={loading}
       className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-40"
     >
-      {loading ? "..." : `💾 ${label}`}
+      {loading ? "..." : label}
     </button>
   );
 }

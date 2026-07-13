@@ -7,13 +7,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import StockForm from "@/components/stocks/StockForm";
 import StockTable from "@/components/stocks/StockTable";
-import VenteForm from "@/components/stocks/VenteForm";
+import SimulateurForm from "@/components/stocks/SimulateurForm";
 import AchatForm from "@/components/stocks/AchatForm";
 
 export default function StocksPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<
-    "matin" | "soir" | "vente" | "achat"
+    "matin" | "soir" | "simulateur" | "achat"
   >("matin");
 
   const { data: caisseData, refetch: refetchCaisse } = useQuery({
@@ -38,7 +38,7 @@ export default function StocksPage() {
   const tabs = [
     { id: "matin" as const, label: "Matin", icon: "🌅" },
     { id: "soir" as const, label: "Soir", icon: "🌆" },
-    { id: "vente" as const, label: "Vente", icon: "💳" },
+    { id: "simulateur" as const, label: "Simulateur", icon: "💳" },
     { id: "achat" as const, label: "Achat", icon: "📦" },
   ];
 
@@ -91,7 +91,7 @@ export default function StocksPage() {
         <>
           {activeTab === "matin" && <StockForm type="matin" />}
           {activeTab === "soir" && <StockForm type="soir" />}
-          {activeTab === "vente" && <VenteForm />}
+          {activeTab === "simulateur" && <SimulateurForm />}
           {activeTab === "achat" && <AchatForm />}
         </>
       )}
