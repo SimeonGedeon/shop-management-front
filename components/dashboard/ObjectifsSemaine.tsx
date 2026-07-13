@@ -136,8 +136,6 @@ export default function ObjectifsSemaine() {
           📊 Détail par jour
         </p>
         {jours.map((jour: any) => {
-          // Pourcentage par rapport à l'objectif
-          const pct = barMax > 0 ? (jour.total_jour / barMax) * 100 : 0;
           const pctCredits =
             barMax > 0 ? (jour.benefice_credits / barMax) * 100 : 0;
 

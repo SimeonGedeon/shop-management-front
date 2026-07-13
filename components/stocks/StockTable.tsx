@@ -29,9 +29,8 @@ export default function StockTable() {
   if (stocks.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200 text-center">
-        <p className="text-gray-400 text-lg mb-1">📦</p>
         <p className="text-gray-500 font-medium">
-          Aucun stock enregistré aujourd'hui
+          Aucun stock enregistré aujourd&apos;hui
         </p>
         <p className="text-gray-400 text-sm mt-1">
           Déclarez le stock du matin pour commencer

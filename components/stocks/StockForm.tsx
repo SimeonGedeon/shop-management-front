@@ -2,13 +2,19 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { stockService, reseauService } from "@/lib/api";
+import { getErrorMessage, stockService, reseauService } from "@/lib/api";
 
 interface Reseau {
   id: number;
   nom: string;
+}
+
+interface Stock {
+  reseau_id: number;
+  stock_matin?: number;
+  stock_soir?: number;
 }
 
 interface StockFormProps {
@@ -30,7 +36,7 @@ export default function StockForm({ type }: StockFormProps) {
     },
   });
 
-  const reseaux: Reseau[] = reseauxData || [];
+  const reseaux: Reseau[] = useMemo(() => reseauxData || [], [reseauxData]);
 
   // Pré-remplir avec les stocks existants
   const { data: stocksData } = useQuery({
@@ -38,12 +44,13 @@ export default function StockForm({ type }: StockFormProps) {
     queryFn: () => stockService.getAll(),
   });
 
-  useEffect(() => {
+  const defaultValues = useMemo(() => {
+    const initial: Record<number, string> = {};
+
     if (stocksData?.data?.stocks && reseaux.length > 0) {
-      const initial: Record<number, string> = {};
       reseaux.forEach((reseau) => {
-        const stock = stocksData.data.stocks.find(
-          (s: any) => s.reseau_id === reseau.id,
+        const stock = (stocksData.data.stocks as Stock[]).find(
+          (s) => s.reseau_id === reseau.id,
         );
         if (stock) {
           initial[reseau.id] = String(
@@ -51,8 +58,9 @@ export default function StockForm({ type }: StockFormProps) {
           );
         }
       });
-      setValues(initial);
     }
+
+    return initial;
   }, [stocksData, reseaux, type]);
 
   const mutation = useMutation({
@@ -60,8 +68,14 @@ export default function StockForm({ type }: StockFormProps) {
       const stocks = reseaux.map((reseau) => ({
         reseau_id: reseau.id,
         ...(type === "matin"
-          ? { stock_matin: parseInt(values[reseau.id]) || 0 }
-          : { stock_soir: parseInt(values[reseau.id]) || 0 }),
+          ? {
+              stock_matin:
+                parseInt(values[reseau.id] ?? defaultValues[reseau.id]) || 0,
+            }
+          : {
+              stock_soir:
+                parseInt(values[reseau.id] ?? defaultValues[reseau.id]) || 0,
+            }),
       }));
 
       // Type assertion to match the expected types for setMatin and setSoir
@@ -76,12 +90,12 @@ export default function StockForm({ type }: StockFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stocks"] });
       setMessage(
-        `✅ Stock ${type === "matin" ? "du matin" : "du soir"} enregistré`,
+        `Stock ${type === "matin" ? "du matin" : "du soir"} enregistré`,
       );
       setTimeout(() => setMessage(""), 3000);
     },
-    onError: (err: any) => {
-      setMessage(`❌ ${err.response?.data?.message || "Erreur"}`);
+    onError: (err) => {
+      setMessage(getErrorMessage(err));
       setTimeout(() => setMessage(""), 5000);
     },
   });
@@ -94,7 +108,7 @@ export default function StockForm({ type }: StockFormProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
       <h3 className="text-lg font-semibold text-gray-900 mb-1">
-        {type === "matin" ? "🌅 Stock du matin" : "🌆 Stock du soir"}
+        {type === "matin" ? "Stock du matin" : "Stock du soir"}
       </h3>
       <p className="text-sm text-gray-500 mb-4">
         {type === "matin"
@@ -105,7 +119,7 @@ export default function StockForm({ type }: StockFormProps) {
       {message && (
         <div
           className={`p-3 rounded-lg text-sm font-medium mb-4 ${
-            message.includes("✅")
+            !message.includes("Erreur")
               ? "bg-green-50 text-green-700 border border-green-200"
               : "bg-red-50 text-red-700 border border-red-200"
           }`}
@@ -123,7 +137,7 @@ export default function StockForm({ type }: StockFormProps) {
               </label>
               <input
                 type="number"
-                value={values[reseau.id] || ""}
+                value={values[reseau.id] ?? defaultValues[reseau.id] ?? ""}
                 onChange={(e) =>
                   setValues({ ...values, [reseau.id]: e.target.value })
                 }

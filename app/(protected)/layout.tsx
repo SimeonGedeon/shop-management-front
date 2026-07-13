@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 
@@ -12,18 +12,16 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const token =
+    typeof window === "undefined" ? null : localStorage.getItem("token");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     if (!token) {
       router.replace("/login");
-    } else {
-      setIsLoading(false);
     }
-  }, [router]);
+  }, [router, token]);
 
-  if (isLoading) {
+  if (!token) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">

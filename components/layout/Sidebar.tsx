@@ -3,6 +3,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ComponentType, SVGProps } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -18,6 +19,17 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 
+type SidebarUser = {
+  name?: string;
+  role?: string;
+};
+
+type NavigationItem = {
+  name: string;
+  href: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+};
+
 const navigation = [
   { name: "Tableau de bord", href: "/dashboard", icon: HomeIcon },
   { name: "Stocks & Ventes", href: "/stocks", icon: CubeIcon },
@@ -28,90 +40,81 @@ const navigation = [
 ];
 
 const adminNavigation = [
-  { name: "Objectifs", href: "/objectifs", icon: ChartBarIcon }, // ← Ajouter
+  { name: "Objectifs", href: "/objectifs", icon: ChartBarIcon },
   { name: "Paramètres", href: "/settings", icon: Cog6ToothIcon },
 ];
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  let user = null;
-  if (typeof window !== "undefined") {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      try {
-        user = JSON.parse(userData);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+function readStoredUser(): SidebarUser | null {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
+  const userData = localStorage.getItem("user");
+  if (!userData) {
+    return null;
+  }
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
+  try {
+    return JSON.parse(userData) as SidebarUser;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
 
-  const NavLinks = () => (
+function NavLinks({
+  user,
+  isActive,
+  closeMobile,
+}: {
+  user: SidebarUser | null;
+  isActive: (href: string) => boolean;
+  closeMobile: () => void;
+}) {
+  const renderLink = (item: NavigationItem) => (
+    <Link
+      key={item.name}
+      href={item.href}
+      onClick={closeMobile}
+      className={`group flex items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
+        isActive(item.href)
+          ? "bg-blue-50 text-blue-700"
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}
+    >
+      <item.icon
+        className={`mr-3 h-5 w-5 flex-shrink-0 ${
+          isActive(item.href)
+            ? "text-blue-700"
+            : "text-gray-400 group-hover:text-gray-600"
+        }`}
+      />
+      {item.name}
+    </Link>
+  );
+
+  return (
     <>
-      {navigation.map((item) => (
-        <Link
-          key={item.name}
-          href={item.href}
-          onClick={() => setMobileOpen(false)}
-          className={`group flex items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
-            isActive(item.href)
-              ? "bg-blue-50 text-blue-700"
-              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-          }`}
-        >
-          <item.icon
-            className={`mr-3 h-5 w-5 flex-shrink-0 ${
-              isActive(item.href)
-                ? "text-blue-700"
-                : "text-gray-400 group-hover:text-gray-600"
-            }`}
-          />
-          {item.name}
-        </Link>
-      ))}
+      {navigation.map(renderLink)}
 
       {user?.role === "admin" && (
         <>
           <div className="my-2 border-t border-gray-200" />
-          {adminNavigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={`group flex items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors min-h-[44px] ${
-                isActive(item.href)
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <item.icon
-                className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                  isActive(item.href)
-                    ? "text-blue-700"
-                    : "text-gray-400 group-hover:text-gray-600"
-                }`}
-              />
-              {item.name}
-            </Link>
-          ))}
+          {adminNavigation.map(renderLink)}
         </>
       )}
     </>
   );
+}
 
-  const UserProfile = () => (
+function UserProfile({
+  user,
+  onLogout,
+}: {
+  user: SidebarUser | null;
+  onLogout: () => void;
+}) {
+  return (
     <div className="flex items-center">
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-sm flex-shrink-0">
         {user?.name?.charAt(0) || "U"}
@@ -125,7 +128,7 @@ export default function Sidebar() {
         </p>
       </div>
       <button
-        onClick={handleLogout}
+        onClick={onLogout}
         title="Déconnexion"
         className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0"
       >
@@ -133,26 +136,59 @@ export default function Sidebar() {
       </button>
     </div>
   );
+}
 
-  const SidebarContent = () => (
+function SidebarContent({
+  user,
+  isActive,
+  closeMobile,
+  onLogout,
+}: {
+  user: SidebarUser | null;
+  isActive: (href: string) => boolean;
+  closeMobile: () => void;
+  onLogout: () => void;
+}) {
+  return (
     <div className="flex h-full flex-col bg-white">
       <div className="flex h-16 items-center justify-center border-b border-gray-200 flex-shrink-0">
         <h1 className="text-xl font-bold text-blue-600">Shop Manager</h1>
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-        <NavLinks />
+        <NavLinks user={user} isActive={isActive} closeMobile={closeMobile} />
       </nav>
       <div className="border-t border-gray-200 p-4 flex-shrink-0">
-        <UserProfile />
+        <UserProfile user={user} onLogout={onLogout} />
       </div>
     </div>
   );
+}
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const user = readStoredUser();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
 
   return (
     <>
       {/* Desktop sidebar - fixe à gauche */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30 shadow-lg">
-        <SidebarContent />
+        <SidebarContent
+          user={user}
+          isActive={isActive}
+          closeMobile={() => setMobileOpen(false)}
+          onLogout={handleLogout}
+        />
       </div>
 
       {/* Mobile top bar */}
@@ -183,7 +219,12 @@ export default function Sidebar() {
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
-            <SidebarContent />
+            <SidebarContent
+              user={user}
+              isActive={isActive}
+              closeMobile={() => setMobileOpen(false)}
+              onLogout={handleLogout}
+            />
           </div>
         </div>
       )}

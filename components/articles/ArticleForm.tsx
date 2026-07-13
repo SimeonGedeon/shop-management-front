@@ -92,7 +92,7 @@ export default function ArticleForm({ onSuccess, onCancel }: ArticleFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prix d'achat total (FC)
+              Prix d&apos;achat total (FC)
             </label>
             <input
               type="number"

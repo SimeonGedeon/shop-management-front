@@ -63,8 +63,7 @@ export default function ArticleTable({
   if (articles.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-200 text-center">
-        <p className="text-gray-400 text-lg mb-1">🛍️</p>
-        <p className="text-gray-500 font-medium">Aucun article aujourd'hui</p>
+        <p className="text-gray-500 font-medium">Aucun article aujourd&apos;hui</p>
         <p className="text-gray-400 text-sm mt-1">
           Ajoutez un article pour commencer
         </p>
